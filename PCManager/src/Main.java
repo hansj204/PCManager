@@ -9,7 +9,7 @@ import javax.swing.JFrame;
 
 public class Main {
 
-	private static Connection connection;
+	public static Connection connect;
 	private JFrame frame;
 
 	public static void main(String[] args) {
@@ -19,12 +19,10 @@ public class Main {
 					
 					Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver").newInstance();
 					
-					connection = DriverManager.getConnection("jdbc:sqlserver://localhost:1443;databaseName=PCManager", "pcadmin", "1");	
+					connect = DriverManager.getConnection("jdbc:sqlserver://localhost:1443;databaseName=PCManager", "pcadmin", "1");	
 					
-					System.out.println(connection);
-					
-					if (connection != null){
-						PCEquipment window = new PCEquipment(connection);
+					if (connect != null){
+						MainPage window = new MainPage(connect); //new Login(connection); //
 						window.setVisible(true);
 						
 						window.addWindowListener(new WindowAdapter() {
@@ -32,7 +30,7 @@ public class Main {
 							@Override
 							public void windowClosing(WindowEvent e) { 
 								try {
-									connection.close();
+									connect.close();
 								} catch (SQLException e1) {
 									e1.printStackTrace();
 								}
