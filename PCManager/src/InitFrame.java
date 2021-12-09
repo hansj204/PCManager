@@ -7,7 +7,7 @@ import java.sql.SQLException;
 
 import javax.swing.JFrame;
 
-public class Main {
+public class InitFrame {
 
 	public static Connection connect;
 	private JFrame frame;
@@ -19,13 +19,12 @@ public class Main {
 					
 					Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver").newInstance();
 					
-					connect = DriverManager.getConnection("jdbc:sqlserver://localhost:1443;databaseName=PCManager", "pcadmin", "1");	
+					connect = DriverManager.getConnection("jdbc:sqlserver://localhost:1443;databaseName=PCManager", "pcadmin", "1");
 					
-					if (connect != null){
-						MainPage window = new MainPage(connect); //new Login(connection); //
-						window.setVisible(true);
-						
-						window.addWindowListener(new WindowAdapter() {
+					if (connect != null) {
+						Login login = new Login(connect);
+						login.setVisible(true);						
+						login.addWindowListener(new WindowAdapter() {
 
 							@Override
 							public void windowClosing(WindowEvent e) { 
@@ -41,20 +40,17 @@ public class Main {
 						});
 						
 					}else {
-//						System.out.println(22);
+						throw new Exception();
 					}
 
-				} catch(ClassNotFoundException e){
-		            System.out.println("드라이버 로딩 실패");
-		        } catch(Exception e){
-		            System.out.println("에러: " + e.getMessage());
-		            //e.printStackTrace();
+				} catch(Exception e){
+		            e.printStackTrace();
 		        }
 			}
 		});
 	}
 
-	public Main() {
+	public InitFrame() {
 		initialize();
 	}
 

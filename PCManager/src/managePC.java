@@ -1,6 +1,7 @@
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.GridLayout;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.Connection;
@@ -10,14 +11,13 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import javax.swing.ImageIcon;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
-
-import element.RoundedButton;
 import javax.swing.border.LineBorder;
 
 public class managePC extends JFrame {
@@ -26,21 +26,23 @@ public class managePC extends JFrame {
 	JTextField serialNum;
 	JComboBox<Item> pcType;
 	JTextField pcName;
-	private JTextField purhaseDate;
 	JTextField manufactureDate;
+	JTextField purhaseDate;
+	
 	HashMap<String, String> pcTypeList = new HashMap<>();
+	public final Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 	
 	private RoundedButton searchBtn;
-	RoundedButton saveBtn;
+	private RoundedButton saveBtn;
 	private RoundedButton deleteBtn;
 	
 	private Connection connect;
 	Font font = new Font("나눔스퀘어", Font.PLAIN, 12);
-	ArrayList<String> info = new ArrayList<>();
+	public ArrayList<String> info = new ArrayList<>();
+	ConfirmAlert alert;
 	
-	/**
-	 * @wbp.parser.constructor
-	 */
+	public managePC() {}
+	
 	public managePC(Connection connect, RoundedButton searchBtn) {
 		this.connect= connect;
 		this.searchBtn = searchBtn;
@@ -61,28 +63,32 @@ public class managePC extends JFrame {
 		delete();
 		
 		try(Statement state= connect.createStatement(); 
-				ResultSet rs =state.executeQuery("SELECT * FROM PC_EQUIPMENT WHERE SERIALNUM LIKE '%"+pcSerialNum+"%';")) {
-			
-				while(rs.next()) {
-					info.add(rs.getString("SERIALNUM"));
-					
-					info.add(rs.getString("PCTYPE"));
-					info.add(rs.getString("PCNAME"));
-					info.add(rs.getString("MANUFACTUREDATE"));
-					info.add(rs.getString("PURCHASEDATE"));
-				}
-
-				setData();
+			ResultSet rs =state.executeQuery("SELECT * FROM PC_EQUIPMENT WHERE SERIALNUM LIKE '%"+pcSerialNum+"%';")) {
+		
+			while(rs.next()) {
+				info.add(rs.getString("SERIALNUM"));
 				
-			} catch (Exception e1) {
-				System.out.println(e1.getCause());
+				info.add(rs.getString("PCTYPE"));
+				info.add(rs.getString("PCNAME"));
+				info.add(rs.getString("MANUFACTUREDATE"));
+				info.add(rs.getString("PURCHASEDATE"));
 			}
+
+			setData();
+			
+		} catch (Exception e1) {
+			System.out.println(e1.getCause());
+		}
 	}
 	
 	public void setAddPC() {
+		ImageIcon icon = new ImageIcon("img/setting.png");
+		setIconImage(icon.getImage());
 		setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
 		setBounds(750, 440, 414, 332);
-		setTitle("상세");
+		setResizable(false);
+		setBounds((int)screenSize.width / 2 - 207, (int)screenSize.getHeight() / 2- 166, 414, 332);
+		setTitle("상세 정보");
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		contentPane.setBackground(Color.white);
@@ -95,7 +101,6 @@ public class managePC extends JFrame {
 		panel.setBounds(12, 10, 374, 231);
 		contentPane.add(panel);
 
-		
 		JLabel serialNumLabel = new JLabel("시리얼 넘버");
 		serialNumLabel.setBounds(35, 33, 212, 35);
 		serialNumLabel.setFont(font);
@@ -117,7 +122,6 @@ public class managePC extends JFrame {
 		pcTypeList.put("n", "노트북");
 
 		pcType = new JComboBox<Item>();
-		pcType.setEnabled(false);
 		pcType.setBounds(129, 78, 212, 25);
 		pcType.setBackground(Color.WHITE);
 		pcType.setFont(font);
@@ -139,7 +143,7 @@ public class managePC extends JFrame {
 		pcName.setColumns(10);
 		contentPane.add(pcName);
 
-		JLabel manufactureDateLabel = new JLabel("제조연월");
+		JLabel manufactureDateLabel = new JLabel("제조일");
 		manufactureDateLabel.setBounds(35, 143, 212, 35);
 		manufactureDateLabel.setFont(font);
 		contentPane.add(manufactureDateLabel);
@@ -156,7 +160,6 @@ public class managePC extends JFrame {
 		contentPane.add(purhaseDateLabel);
 		
 		purhaseDate = new JTextField();
-		purhaseDate.setEnabled(false);
 		purhaseDate.setBounds(129, 188, 212, 25);
 		purhaseDate.setColumns(10);
 		purhaseDate.setFont(font);
@@ -194,6 +197,27 @@ public class managePC extends JFrame {
 		
 	}
 	
+	private Boolean validation() {		
+		Boolean check = false;	
+		String datePattern = "^\\d{4}\\-(0[1-9]|1[012])\\-(0[1-9]|[12][0-9]|3[01])$";
+		
+		if(serialNum.getText().trim().length() == 0) {
+			check = true;
+			new WarnAlert("시리얼번호는 필수 항목입니다.").setVisible(true);
+		} else if(pcName.getText().trim().length() == 0) {
+			check = true;
+			new WarnAlert("이름은 필수 항목입니다.").setVisible(true);
+		} else if(!(manufactureDate.getText().trim().length() == 0 || manufactureDate.getText().matches(datePattern))) {
+			check = true;
+			new WarnAlert("제조일의 형식은 YYYY-MM-dd입니다.").setVisible(true);
+		} else if(!(purhaseDate.getText().trim().length() == 0 || purhaseDate.getText().matches(datePattern))) {
+			check = true;
+			new WarnAlert("구매일의 형식은 YYYY-MM-dd입니다.").setVisible(true);
+		}
+		
+		return check;
+	}
+	
 	private void insert() {		
 		RoundedButton insertBtn = new RoundedButton("저장");
 		insertBtn.setBounds(304, 255, 82, 25);
@@ -206,24 +230,25 @@ public class managePC extends JFrame {
 					try(PreparedStatement ps = connect.prepareStatement("INSERT INTO PC_EQUIPMENT VALUES (?,?,?,?,?)")){
 						
 	                    Item item = (Item)pcType.getSelectedItem();
+	                    
+	    				if(validation()) return;
 						
-						ps.setString(1, serialNum.getText());
-						
-						System.out.println(1);
+						ps.setString(1, serialNum.getText());						
 						ps.setString(2, item.getId());
 						ps.setString(3, pcName.getText());
-						ps.setString(4, "2021-10-19");
-						ps.setString(5, "2021-10-19");
+						ps.setString(4, (manufactureDate.getText().trim().length() > 0)? manufactureDate.getText() : null);
+						ps.setString(5, (purhaseDate.getText().trim().length() > 0)? purhaseDate.getText() : null);
 						int res = ps.executeUpdate();
 						
 						if (res == 1) {
 							System.out.println("============저장 성공============");
 							searchBtn.doClick();
+							new NormalAlert("추가되었습니다.").setVisible(true);
 							dispose();
 						}
 						
-					} catch (Exception e1) {
-						System.out.println(e1.getMessage());
+					} catch (Exception exp) {
+						new WarnAlert(exp.getMessage()).setVisible(true);
 					}
 				}
 			}
@@ -236,26 +261,30 @@ public class managePC extends JFrame {
 		saveBtn.setBounds(304, 255, 82, 25);
 		contentPane.add(saveBtn);
 		saveBtn.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {				
-				Item item = (Item)pcType.getSelectedItem();
-				String updateSQL = "UPDATE PC_EQUIPMENT SET PCTYPE = ?, PCNAME = ?, PURCHASEDATE = ? WHERE SERIALNUM=?;";
+			public void actionPerformed(ActionEvent e) {	
 				
-				try(PreparedStatement ps = connect.prepareStatement(updateSQL)){
+				Item item = (Item)pcType.getSelectedItem();
+				
+				try(PreparedStatement ps = connect.prepareStatement("UPDATE PC_EQUIPMENT SET PCTYPE = ? , PCNAME = ?, MANUFACTUREDATE = ?, PURCHASEDATE = ?  WHERE SERIALNUM=?;")){
+					
+					if(validation()) return;
 					
 					ps.setString(1, item.getId());
 					ps.setString(2, pcName.getText());
-					ps.setString(3, purhaseDate.getText());
-					ps.setString(4, serialNum.getText());
+					ps.setString(3, (manufactureDate.getText().trim().length() > 0)? manufactureDate.getText() : null);
+					ps.setString(4, (purhaseDate.getText().trim().length() > 0)? purhaseDate.getText() : null);
+					ps.setString(5, serialNum.getText());
 					int res = ps.executeUpdate();
 					
 					if (res == 1) {
 						System.out.println("============수정 성공============");
 						searchBtn.doClick();
+						new NormalAlert("수정되었습니다.").setVisible(true);
 						dispose();
 					}
 					
-				} catch (Exception e1) {
-					System.out.println(e1.getMessage());
+				} catch (Exception exp) {
+					new WarnAlert(exp.getMessage()).setVisible(true);
 				}
 			}
 		});
@@ -291,8 +320,7 @@ public class managePC extends JFrame {
 				update();
 				delete();
 			}
-		});
-		
+		});		
 	}
 	
 	private void delete() {
@@ -300,24 +328,35 @@ public class managePC extends JFrame {
 		deleteBtn.setFont(font);
 		deleteBtn.setBounds(214, 255, 82, 25);
 		contentPane.add(deleteBtn);
+		
+		managePC _this = this;
+		
 		deleteBtn.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				Item item = (Item)pcType.getSelectedItem();
-				String updateSQL = "DELETE FROM PC_EQUIPMENT WHERE SERIALNUM= ?;";
-				
-				try(PreparedStatement ps = connect.prepareStatement(updateSQL)){
-					
-					ps.setString(1, serialNum.getText());
-					int res = ps.executeUpdate();
-					
-					System.out.println("============삭제 성공============");
-					searchBtn.doClick();
-					dispose();
-					
-				} catch (Exception e1) {
-					System.out.println(e1.getMessage());
-				}
+			public void actionPerformed(ActionEvent e) {				
+				alert = new ConfirmAlert(_this, "삭제하시겠습니까?");
+				alert.setVisible(true);
 			}
 		});
+	}
+	
+	protected void deleteData() {
+		Item item = (Item)pcType.getSelectedItem();
+		String updateSQL = "DELETE FROM PC_EQUIPMENT WHERE SERIALNUM= ?;";
+		
+		try(PreparedStatement ps = connect.prepareStatement(updateSQL)) {
+			
+			ps.setString(1, serialNum.getText());
+			int res = ps.executeUpdate();
+			
+			if (res == 1) {
+				System.out.println("============삭제 성공============");
+				new NormalAlert("삭제되었습니다.").setVisible(true);
+				searchBtn.doClick();
+				dispose();
+			}
+			
+		 } catch (Exception exp) {
+			new WarnAlert(exp.getMessage()).setVisible(true);
+		}
 	}
 }

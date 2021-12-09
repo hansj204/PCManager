@@ -3,6 +3,7 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
@@ -10,9 +11,11 @@ import java.awt.event.MouseEvent;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.HashMap;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -26,8 +29,6 @@ import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.MatteBorder;
 import javax.swing.table.DefaultTableModel;
-
-import element.RoundedButton;
 
 class Item {
 
@@ -62,14 +63,20 @@ public class MainPage extends JFrame {
 	private JPanel buttonArea;
 	private JScrollPane scrollPane;
 	private JScrollPane userScrollPane;
-	private String userId;
 	Font font = new Font("나눔스퀘어", Font.BOLD, 14);
 	private JTextField pcName;
+	private JTextField userId;
+	manageUsingPC manageUsingPC = null;
+	
+	public final Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 	
 	public MainPage(Connection connect) {
+		ImageIcon icon = new ImageIcon("img/setting.png");
+		setIconImage(icon.getImage());
 		setBackground(Color.WHITE);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(550, 250, 941, 604);
+		setBounds((int)screenSize.width / 2 - 419, (int)screenSize.getHeight() / 2- 301, 938, 602);
+		setResizable(false);
 		setTitle("PCManager");
 		
 		JPanel panel = new JPanel();
@@ -199,14 +206,13 @@ public class MainPage extends JFrame {
 		addBtn.setFont(font);
 		buttonArea.add(addBtn);
 		
-		DefaultTableModel pcTableModel = new DefaultTableModel(new String[]{"시리얼 번호", "PC 종류", "이름", "사용 여부"}, 0) ;
+		DefaultTableModel pcTableModel = new DefaultTableModel(new String[]{"시리얼 번호", "PC 종류", "이름", "사용중"}, 0) ;
 		
 		JTable pcEQTable = new JTable(pcTableModel) ;
 		pcEQTable.setBackground(Color.WHITE);
 		pcEQTable.setFont(new Font("나눔스퀘어", Font.PLAIN, 14));
 		pcEQTable.setRowHeight(20);
-		pcEQTable.setEnabled(false);
-		pcEQTable.setSelectionBackground(Color.red);
+		pcEQTable.setSelectionBackground(Color.LIGHT_GRAY);
 		
 		pcEQTable.addMouseListener(new MouseAdapter() {
 			@Override
@@ -228,27 +234,104 @@ public class MainPage extends JFrame {
 		pcUserListArea.setOrientation(SwingConstants.VERTICAL);
 		tabbedPane.addTab("PC 사용자 목록", null, pcUserListArea, null);
 		
-		searchArea = new JPanel();
-		searchArea.setBorder(new MatteBorder(1, 1, 2, 1, (Color) Color.LIGHT_GRAY));
-		pcUserListArea.add(searchArea);
-		searchArea.setBackground(Color.WHITE);
-		searchArea.setLayout(null);
-				
+		JPanel userSearchArea = new JPanel();
+		userSearchArea.setBorder(new MatteBorder(0, 0, 2, 0, (Color) Color.LIGHT_GRAY));
+		userSearchArea.setBackground(Color.WHITE);
+		pcUserListArea.add(userSearchArea);
+		userSearchArea.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
+		
+		JPanel userIdArea = new JPanel();
+		userIdArea.setBorder(BorderFactory.createEmptyBorder(0 , 0 , 0 , 20));
+		userIdArea.setBackground(Color.WHITE);
+		userSearchArea.add(userIdArea);
+		userIdArea.setLayout(new GridLayout(0, 1, 0, 0));
+		
+		JLabel userIdLabel = new JLabel("사번");
+		userIdLabel.setFont(new Font("나눔스퀘어", Font.PLAIN, 14));
+		userIdArea.add(userIdLabel);
+		
+		userId = new JTextField();
+		userId.setPreferredSize(new Dimension(200, 25));
+		userId.setFont(new Font("나눔스퀘어", Font.PLAIN, 14));
+		userId.setColumns(15);
+		userIdArea.add(userId);
+		
+		JPanel departmentArea = new JPanel();
+		departmentArea.setBorder(BorderFactory.createEmptyBorder(0 , 0 , 0 , 20));
+		departmentArea.setBackground(Color.WHITE);
+		userSearchArea.add(departmentArea);
+		departmentArea.setLayout(new GridLayout(0, 1, 0, 0));
+		
+		JLabel pcTypeLabel_1 = new JLabel("부서");
+		pcTypeLabel_1.setFont(new Font("나눔스퀘어", Font.PLAIN, 14));
+		departmentArea.add(pcTypeLabel_1);
+		
+		JComboBox<Item> department = new JComboBox<Item>();
+		department.setPreferredSize(new Dimension(180, 25));
+		department.setFont(new Font("나눔스퀘어", Font.PLAIN, 14));
+		department.setBackground(Color.WHITE);
+		departmentArea.add(department);
+		
+		HashMap<String, String> departmentList = new HashMap<>();
+		departmentList.put("", "전체");
+		
+		try(Statement state= connect.createStatement(); ResultSet rs =state.executeQuery("SELECT * from DEPARTMENT;")) {				
+			while(rs.next()) {        					
+				departmentList.put(rs.getString("DEPARTMENTCODE"), rs.getString("DEPARTMENTNAME"));
+			}				
+		} catch (Exception e1) {
+			e1.getStackTrace();
+		}
+		
+		for(String key : departmentList.keySet()) {
+			Item item = new Item(key, departmentList.get(key));
+			department.addItem(item);
+		}
+		
+		JPanel userNameArea = new JPanel();
+		userNameArea.setBorder(BorderFactory.createEmptyBorder(0 , 0 , 0 , 20));
+		userNameArea.setBackground(Color.WHITE);
+		userSearchArea.add(userNameArea);
+		userNameArea.setLayout(new GridLayout(0, 1, 0, 0));
+		
+		JLabel pcNameLabel_1 = new JLabel("이름");
+		pcNameLabel_1.setFont(new Font("나눔스퀘어", Font.PLAIN, 14));
+		userNameArea.add(pcNameLabel_1);
+		
+		JTextField userName = new JTextField();
+		userName.setPreferredSize(new Dimension(200, 25));
+		userName.setFont(new Font("나눔스퀘어", Font.PLAIN, 14));
+		userName.setColumns(15);
+		userNameArea.add(userName);
+		
+		JPanel searchBtnArea2 = new JPanel();
+		searchBtnArea2.setPreferredSize(new Dimension(60, 50));
+		searchBtnArea2.setBorder(BorderFactory.createEmptyBorder(6 , 0 , 0 , 0));
+		searchBtnArea2.setBackground(Color.WHITE);
+		userSearchArea.add(searchBtnArea2);
+		searchBtnArea2.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
+		
 		RoundedButton searchUserBtn = new RoundedButton("검색");
-		searchUserBtn.setBounds(423, 6, 59, 25);
+		searchBtnArea2.add(searchUserBtn);
 		searchUserBtn.setFont(new Font("나눔스퀘어", Font.PLAIN, 14));
-		searchArea.add(searchUserBtn);
+		searchUserBtn.doClick();
 		
 		String userColumn[] = {"사번", "부서", "이름"};		
 		DefaultTableModel usertableModel = new DefaultTableModel(userColumn, 0);
 		
 		JTable userTable = new JTable(usertableModel);
 		userTable.setRowHeight(20);
+		userTable.setSelectionBackground(Color.LIGHT_GRAY);
 		userTable.setFont(new Font("나눔스퀘어", Font.PLAIN, 14));
-		userTable.setEnabled(false);
 		
 		userScrollPane = new JScrollPane(userTable);
 		userScrollPane.getViewport().setBackground(Color.WHITE);
+		
+		JPanel buttonArea2 = new JPanel();
+		buttonArea2.setBorder(BorderFactory.createEmptyBorder(20 , 0 , 0 , 0));
+		buttonArea2.setBackground(Color.WHITE);
+		pcUserListArea.add(buttonArea2);
+		buttonArea2.setLayout(new FlowLayout(FlowLayout.RIGHT, 5, 5));
 		pcUserListArea.add(userScrollPane);
 		
 		userTable.addMouseListener(new MouseAdapter() {
@@ -256,11 +339,9 @@ public class MainPage extends JFrame {
 			@Override
 			public void mouseClicked(MouseEvent evt) {
 				int row = userTable.rowAtPoint(evt.getPoint());
-	//	        int col = userTable.columnAtPoint(evt.getPoint());
-//		        if (col == userColumn.length - 1) {
-		        	new manageUsingPC(connect, (String)userTable.getModel().getValueAt(row, 0)).setVisible(true);
-		        	
-
+				if(null != manageUsingPC) manageUsingPC.dispose();
+				manageUsingPC = new manageUsingPC(connect, (String)userTable.getModel().getValueAt(row, 0), searchPCBtn);
+				manageUsingPC.setVisible(true);
 			}
 		});
 
@@ -300,9 +381,12 @@ public class MainPage extends JFrame {
         				System.out.println(e1);
         			}
                 }  else if(e.getSource() == searchUserBtn){
-                    
+                	
+                	 Item departmentItem = (Item)department.getSelectedItem();
+                	
         			try(Statement state= connect.createStatement(); 
-        				ResultSet rs =state.executeQuery("SELECT A.USERID, B.DEPARTMENTNAME, A.USERNAME from EMPLOYEE A, DEPARTMENT B where A.DEPARTMENTCODE = B.DEPARTMENTCODE;")) {
+        				ResultSet rs =state.executeQuery("SELECT A.USERID, B.DEPARTMENTNAME, A.USERNAME from EMPLOYEE A, DEPARTMENT B WHERE A.DEPARTMENTCODE = B.DEPARTMENTCODE"
+        						+ " AND A.USERID LIKE '%"+userId.getText()+"%' AND A.USERNAME LIKE '%"+userName.getText() +"%' AND A.DEPARTMENTCODE LIKE '%"+departmentItem.getId() +"%'" )) {
         				
         				usertableModel.setRowCount(0);
         				
@@ -311,7 +395,7 @@ public class MainPage extends JFrame {
         				}
         				
         			} catch (Exception e1) {
-        				System.out.println(e1);
+        				e1.printStackTrace();
         			}
                 }
             }
@@ -319,8 +403,8 @@ public class MainPage extends JFrame {
         
         searchPCBtn.addActionListener(eventHandler);	
 		addBtn.addActionListener(eventHandler);		
-		searchUserBtn.addActionListener(eventHandler);	
+		searchUserBtn.addActionListener(eventHandler);
 		searchPCBtn.doClick();
-		searchUserBtn.doClick();
+		searchUserBtn.doClick();	
 	}
 }

@@ -1,11 +1,14 @@
 import java.awt.Color;
-import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Image;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -20,13 +23,9 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
-import javax.swing.ListSelectionModel;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableCellRenderer;
-
-import element.RoundedButton;
 
 public class manageUsingPC extends JFrame {
 
@@ -35,18 +34,19 @@ public class manageUsingPC extends JFrame {
 	
 	private String userId;
 	private Connection connect;
-	private ArrayList<String> propertyList = new ArrayList<String>();
-	Font font;
+	private RoundedButton searchBtn;
+	
 	JTable userPCTable;
 	DefaultTableModel userPCTableModel;
+	addUsingPC usingPC = null;
+
+	Font font = new Font("나눔스퀘어", Font.PLAIN, 12);
+	public final Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 	
-	/**
-	 * @wbp.parser.constructor
-	 */
-	public manageUsingPC(Connection connect, String userId) {
-		font = new Font("나눔스퀘어", Font.PLAIN, 12);
+	public manageUsingPC(Connection connect, String userId, RoundedButton searchBtn) {
 		this.connect= connect;
 		this.userId = userId;
+		this.searchBtn = searchBtn;
 		
 		setUsingPC();
 		insert();
@@ -54,52 +54,36 @@ public class manageUsingPC extends JFrame {
 	}
 	
 	private void setUsingPC() {
+		ImageIcon icon = new ImageIcon("img/setting.png");
+		setIconImage(icon.getImage());
+		setTitle("사용중인 PC 장비 목록");
 		setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
 		setBounds(750, 440, 414, 332);
+		setResizable(false);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		contentPane.setBackground(Color.WHITE);
 		contentPane.setLayout(null);
 		setContentPane(contentPane);
+		addWindowListener(new WindowAdapter() {						
+			@Override
+			public void windowClosing(WindowEvent e) { 
+				if(null != usingPC)usingPC.dispose();
+			}
+		});
 		
 		//사용자 - 이용 컴퓨터 목록				
-		userPCTableModel = new DefaultTableModel(new String[]{"시리얼 넘버", "PC 종류", "PC 이름"}, 0){
-			
-			@Override
-			public boolean isCellEditable(int row, int column) {
-				if(row == getRowCount() - 1) return true;
-				return false;
-			}
-			
-			@Override
-			public int getRowCount() {
-				return super.getRowCount();
-			}
-		};
+		userPCTableModel = new DefaultTableModel(new String[]{"시리얼 넘버", "PC 종류", "PC 이름"}, 0);
 		
-		userPCTable = new JTable(userPCTableModel) {
-			public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
-				Component comp=super.prepareRenderer(renderer,row, column);
-				int modelRow=convertRowIndexToModel(row);
-		        
-				if(!isRowSelected(modelRow)) comp.setBackground(Color.WHITE);
-		        else comp.setBackground(Color.LIGHT_GRAY);
-		        
-				return comp;
-			};
-		};
+		userPCTable = new JTable(userPCTableModel);
 		
 		userPCTable.setBackground(Color.WHITE);
 		userPCTable.setFont(font);
-		userPCTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-		userPCTable.setRowSelectionAllowed(true);
-		userPCTable.setEnabled(false);
+		userPCTable.setSelectionBackground(Color.LIGHT_GRAY);
 		userPCTable.setRowHeight(20);
-		userPCTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-
 		
 		JScrollPane pcScrollPane = new JScrollPane(userPCTable);
-		pcScrollPane.setBounds(12, 50, 374, 201);
+		pcScrollPane.setBounds(12, 45, 374, 206);
 		pcScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		pcScrollPane.getViewport().setBackground(Color.WHITE);
 		contentPane.add(pcScrollPane);
@@ -125,57 +109,74 @@ public class manageUsingPC extends JFrame {
 			}
 				
 		} catch (Exception e1) {
-			System.out.println(e1);
+			new WarnAlert(e1.getMessage());
 		}
     	
     	RoundedButton okBtn = new RoundedButton("확인");
     	okBtn.setFont(font);
-		okBtn.setBounds(304, 260, 82, 25);
+		okBtn.setBounds(304, 268, 82, 25);
 		contentPane.add(okBtn);
 		okBtn.addActionListener(new ActionListener() {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				
-				for(String property : propertyList) {
-					try(PreparedStatement ps = connect.prepareStatement("INSERT INTO PC_USERS VALUES (?,?)")) {				
-						ps.setString(1, userId);
-						ps.setString(2, (String) property);
-						int res = ps.executeUpdate();
-						
-						if (res == 1) {
-							System.out.println("============저장 성공============");							
-							dispose();
+				Boolean error = false;
+				ArrayList<String> propertyList = new ArrayList<>();
+				
+				for(int i = 0; i < userPCTableModel.getRowCount(); i++) {
+					propertyList.add((String) userPCTableModel.getValueAt(i, 0));
+				}
+				
+				try(PreparedStatement ps = connect.prepareStatement("DELETE FROM PC_USERS WHERE USERID = ?;")) {					
+					ps.setString(1, userId);
+					ps.executeUpdate();
+															
+				} catch (Exception e1) {
+					error = false;
+					new WarnAlert(e1.getMessage()).setVisible(true);
+					e1.printStackTrace();
+				}
+				
+				if(!error) {
+					for(String property : propertyList) {
+						try(PreparedStatement ps = connect.prepareStatement("INSERT INTO PC_USERS VALUES (?,?)")) {				
+							ps.setString(1, userId);
+							ps.setString(2, (String) property);
+							int res = ps.executeUpdate();
+							
+							if (res == 1) {
+								new NormalAlert("저장되었습니다.").setVisible(true);														
+								searchBtn.doClick();
+							}
+							
+						} catch (SQLException e1) {
+							new WarnAlert(e1.getMessage()).setVisible(true);
+							e1.printStackTrace();
 						}
-						
-					} catch (SQLException e1) {
-						e1.printStackTrace();
 					}
 				}
 				
+				dispose();
 			}
 		});
 	}
 	
-	protected void addPropery(ArrayList<String> data) {
-		for(String propery : data) {
+	protected void addProperty(String propery) {
+		try(Statement state= connect.createStatement(); ResultSet rs =state.executeQuery("SELECT * FROM PC_EQUIPMENT WHERE SERIALNUM = '"+propery+"';")) {
 			
-			try(Statement state= connect.createStatement(); ResultSet rs =state.executeQuery("SELECT * FROM PC_EQUIPMENT WHERE SERIALNUM LIKE '%"+propery+"%';")) {
-				
-				while(rs.next()) {
+			while(rs.next()) {
 
-					String pcType = "";
-					
-					for(String key : pcTypeList.keySet()) {
-						if(key.equals(rs.getString("PCTYPE"))) pcType = pcTypeList.get(key);
-					}
-					
-					userPCTableModel.addRow(new Object[]{ rs.getString("SERIALNUM"), pcType, rs.getString("PCNAME") });
-					propertyList.add(propery);
+				String pcType = "";
+				
+				for(String key : pcTypeList.keySet()) {
+					if(key.equals(rs.getString("PCTYPE"))) pcType = pcTypeList.get(key);
 				}
-			} catch (Exception e1) {
-				System.out.println(e1.getCause());
+				
+				userPCTableModel.addRow(new Object[]{ rs.getString("SERIALNUM"), pcType, rs.getString("PCNAME") });
 			}
+		} catch (Exception e1) {
+			System.out.println(e1.getCause());
 		}
 	}
 	
@@ -183,15 +184,17 @@ public class manageUsingPC extends JFrame {
 		
 		manageUsingPC frame = this;
 		
-		Image img = new ImageIcon("img/plus.png").getImage().getScaledInstance(25, 25, Image.SCALE_SMOOTH ); 
+		Image img = new ImageIcon("img/plus.png").getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH ); 
 		JLabel plusBtn = new JLabel(new ImageIcon(img));
-		plusBtn.setBounds(20, 15, 25, 25);
+		plusBtn.setBounds(20, 15, 20, 20);
 		contentPane.add(plusBtn);		
 		plusBtn.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
 				try {
-					new addUsingPC(frame, userId, connect).setVisible(true);
+					if(null != usingPC)usingPC.dispose();
+					usingPC = new addUsingPC(frame, userId, connect);
+					usingPC.setVisible(true);
 				} catch (SQLException e1) {
 					e1.printStackTrace();
 				}
@@ -200,27 +203,14 @@ public class manageUsingPC extends JFrame {
 	}
 	
 	private void delete() {
-		Image img = new ImageIcon("img/minus.png").getImage().getScaledInstance(25, 25, Image.SCALE_SMOOTH ); 
+		Image img = new ImageIcon("img/minus.png").getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH ); 
 		JLabel deleteBtn = new JLabel(new ImageIcon(img));
-		deleteBtn.setBounds(57, 15, 25, 25);
+		deleteBtn.setBounds(50, 15, 20, 20);
 		contentPane.add(deleteBtn);
+			
 		deleteBtn.addMouseListener(new MouseAdapter() {
 			public void mouseClicked(MouseEvent e) {
-				String updateSQL = "DELETE FROM PC_EQUIPMENT WHERE SERIALNUM= ?;";
-				
-				try(PreparedStatement ps = connect.prepareStatement(updateSQL)){
-					
-					for(int idx : userPCTable.getSelectedRows()) {
-						ps.setString(1, (String) userPCTable.getModel().getValueAt(idx, 0));
-						ps.executeUpdate();
-					}
-					
-					System.out.println("============삭제 성공============");
-					dispose();
-					
-				} catch (Exception e1) {
-					System.out.println(e1.getMessage());
-				}
+				userPCTableModel.removeRow(userPCTable.getSelectedRow());
 			}
 		});
 	}
