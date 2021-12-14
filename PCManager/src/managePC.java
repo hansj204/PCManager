@@ -47,7 +47,7 @@ public class managePC extends JFrame {
 		this.connect= connect;
 		this.searchBtn = searchBtn;
 		
-		setAddPC();		
+		setPCInfo();		
 		setComponent(true);
 		insert();
 	}
@@ -57,7 +57,7 @@ public class managePC extends JFrame {
 		this.connect= connect;
 		this.searchBtn = searchBtn;
 		
-		setAddPC();
+		setPCInfo();
 		setComponent(false);
 		update();
 		delete();
@@ -81,7 +81,7 @@ public class managePC extends JFrame {
 		}
 	}
 	
-	public void setAddPC() {
+	public void setPCInfo() {
 		ImageIcon icon = new ImageIcon("img/setting.png");
 		setIconImage(icon.getImage());
 		setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
@@ -298,6 +298,7 @@ public class managePC extends JFrame {
 		updateBtn.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				setComponent(true);
+				serialNum.setEditable(false);
 				updateBtn.setVisible(false);
 				deleteBtn.setVisible(false);
 				modify();

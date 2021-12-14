@@ -66,6 +66,7 @@ public class MainPage extends JFrame {
 	Font font = new Font("나눔스퀘어", Font.BOLD, 14);
 	private JTextField pcName;
 	private JTextField userId;
+	managePC managePC = null;
 	manageUsingPC manageUsingPC = null;
 	
 	public final Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -206,8 +207,13 @@ public class MainPage extends JFrame {
 		addBtn.setFont(font);
 		buttonArea.add(addBtn);
 		
-		DefaultTableModel pcTableModel = new DefaultTableModel(new String[]{"시리얼 번호", "PC 종류", "이름", "사용중"}, 0) ;
-		
+		DefaultTableModel pcTableModel = new DefaultTableModel(new String[]{"시리얼 번호", "PC 종류", "이름", "사용중"}, 0) { 
+			@Override
+			public boolean isCellEditable(int row, int column) {
+				return false;
+			}
+		};
+
 		JTable pcEQTable = new JTable(pcTableModel) ;
 		pcEQTable.setBackground(Color.WHITE);
 		pcEQTable.setFont(new Font("나눔스퀘어", Font.PLAIN, 14));
@@ -317,7 +323,12 @@ public class MainPage extends JFrame {
 		searchUserBtn.doClick();
 		
 		String userColumn[] = {"사번", "부서", "이름"};		
-		DefaultTableModel usertableModel = new DefaultTableModel(userColumn, 0);
+		DefaultTableModel usertableModel = new DefaultTableModel(userColumn, 0){ 
+			@Override
+			public boolean isCellEditable(int row, int column) {
+				return false;
+			}
+		};
 		
 		JTable userTable = new JTable(usertableModel);
 		userTable.setRowHeight(20);
@@ -350,9 +361,11 @@ public class MainPage extends JFrame {
                     
             @Override
             public void actionPerformed(ActionEvent e) {                
-                if(e.getSource() == addBtn){
-                    new managePC(connect, searchPCBtn).setVisible(true);                    
-                } else if(e.getSource() == searchPCBtn){
+                if(e.getSource() == addBtn) {
+                	if(null != managePC) managePC.dispose();
+                	managePC = new managePC(connect, searchPCBtn);
+                	managePC.setVisible(true);                  
+                } else if(e.getSource() == searchPCBtn){                	
                     Item typeItem = (Item)pcType.getSelectedItem();
                     Item useItem = (Item)useYNList.getSelectedItem();
                     
@@ -378,7 +391,7 @@ public class MainPage extends JFrame {
         				}
         				
         			} catch (Exception e1) {
-        				System.out.println(e1);
+        				e1.printStackTrace();
         			}
                 }  else if(e.getSource() == searchUserBtn){
                 	
